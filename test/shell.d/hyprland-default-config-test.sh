@@ -175,6 +175,37 @@ if grep -Fq $'SUPER + CTRL + X	Toggle dictation' <<<"$missing_voxtype_output"; t
 fi
 pass "missing Voxtype skips dictation bindings"
 
+# Lazydocker is optional on new installs, while existing installs keep the hotkey.
+lazydocker_bin="$tmpdir/lazydocker-bin"
+mkdir -p "$lazydocker_bin"
+touch "$lazydocker_bin/lazydocker"
+chmod +x "$lazydocker_bin/lazydocker"
+lazydocker_output=$(PATH="$lazydocker_bin:$PATH" run_application_bindings "$fresh_home")
+grep -Fqx $'SUPER + SHIFT + D\tDocker' <<<"$lazydocker_output" ||
+  fail "installed Lazydocker keeps its Docker shortcut"
+pass "installed Lazydocker keeps its Docker shortcut"
+
+missing_lazydocker_output=$(PATH="$missing_bin" run_application_bindings "$fresh_home")
+if grep -Fq $'SUPER + SHIFT + D\tDocker' <<<"$missing_lazydocker_output"; then
+  fail "missing Lazydocker skips its Docker shortcut"
+fi
+pass "missing Lazydocker skips its Docker shortcut"
+
+# The Grave shortcuts are aliases, so the original SUPER + S pair has to keep
+# working alongside them.
+scratchpad_home="$tmpdir/scratchpad-home"
+mkdir -p "$scratchpad_home"
+scratchpad_output=$(run_omarchy_bindings "$scratchpad_home")
+grep -Fqx $'SUPER + S	Toggle scratchpad' <<<"$scratchpad_output" ||
+  fail "scratchpad keeps its existing toggle binding"
+grep -Fqx $'SUPER + grave	Toggle scratchpad' <<<"$scratchpad_output" ||
+  fail "scratchpad supports a Quake-style toggle binding"
+grep -Fqx $'SUPER + ALT + S	Move window to scratchpad' <<<"$scratchpad_output" ||
+  fail "scratchpad keeps its existing move binding"
+grep -Fqx $'SUPER + SHIFT + grave	Move window to scratchpad' <<<"$scratchpad_output" ||
+  fail "scratchpad supports a Quake-style move binding"
+pass "scratchpad retains existing bindings and adds Grave shortcuts"
+
 # The panel hotkeys claim a row of keys that workspace switching already uses
 # under other modifiers, so the count matters as much as the bindings: a tenth
 # claim on SUPER + CTRL + a number is a collision with one of these.
