@@ -338,11 +338,19 @@ function matchesQuery(entry, query, visible) {
   return true
 }
 
+// Ranking policy: any matching installed app outranks any menu entry.
+// Must stay larger than every match tier used in searchScore (max 80 today).
+var APP_RANK_BIAS = 100
+
 function searchScore(items, entry, query) {
   var needle = String(query || "").toLowerCase().trim()
   var label = entry.label.toLowerCase()
   var nameText = nameSearchText(entry)
   var descriptionText = String(entry.description || "").toLowerCase()
+  // Match tiers: 0 exact label / whole-word app, 2 root exact, 10 prefix,
+  // 30 substring, 40 name text, 60 description, 80 fallback. APP_RANK_BIAS
+  // must exceed every tier value so the apps-first guarantee below holds
+  // across tiers; bump it if a new tier >= 100 is ever added.
   var score = 80
 
   if (label === needle) score = entry.parent === "root" ? 2 : 0
@@ -358,10 +366,11 @@ function searchScore(items, entry, query) {
   // Installed apps always rank above menu entries in search. Typing in the
   // menu is overwhelmingly an intent to launch, so even a menu entry that
   // matches the query better textually (Setup > Defaults > Editor > VSCode
-  // for "vsc") must not sit above the app itself. The bias exceeds every
-  // match tier, so it holds across tiers while apps still sort by tier
-  // among themselves.
-  if (entry.kind === "app") score -= 100
+  // for "vsc") must not sit above the app itself. This is deliberate for
+  // exact label matches too: typing "Font" (exact label of style.font)
+  // still ranks FontForge first. The bias exceeds every match tier, so it
+  // holds across tiers while apps still sort by tier among themselves.
+  if (entry.kind === "app") score -= APP_RANK_BIAS
 
   return score * 1000 + depthFor(items, entry.id) * 25 + entry.order
 }
@@ -653,6 +662,7 @@ if (typeof module !== "undefined") {
     dmenuValue: dmenuValue,
     dmenuSelections: dmenuSelections,
     toggleDmenuSelection: toggleDmenuSelection,
+    APP_RANK_BIAS: APP_RANK_BIAS,
     displayRow: displayRow
   }
 }
